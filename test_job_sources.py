@@ -32,7 +32,15 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(jane_location['salary_max'], 237500)
         self.assertEqual(jane_location['salary_currency'], 'CAD')
         self.assertEqual(jane_location['salary_extraction_confidence'], 'context')
+        jobber = salary_fields('This role has a minimum annual salary of $151,200, a midpoint of $177,900, and a maximum salary of $204,500. Base salary is one part of total compensation.', 'Toronto; Vancouver')
+        self.assertEqual(jobber['salary_min'], 151200)
+        self.assertEqual(jobber['salary_max'], 204500)
+        self.assertEqual(jobber['salary_basis'], 'base')
         self.assertEqual(salary_fields('$114,000—$142,500 CAD\n$176,000—$220,000 CAD')['salary_extraction_confidence'], 'ambiguous')
+        okta = salary_fields('$116,000—$174,000 USD\nBelow is the annual salary range for candidates located in Canada.\n$117,000—$160,600 CAD', 'Toronto; Washington')
+        self.assertEqual(okta['salary_min'], 117000)
+        self.assertEqual(okta['salary_max'], 160600)
+        self.assertEqual(okta['salary_basis'], '')
         self.assertEqual(salary_fields('Annual compensation CAD 175k - 200k')['salary_basis'], '')
 
     def test_unparsed_pay_is_review_not_undisclosed(self):
@@ -135,6 +143,19 @@ class SourceTests(unittest.TestCase):
         canada = {**base, 'location': 'Remote - US; Remote - Canada', 'url': 'https://example.com/ca'}
         admitted = collection_assessment(canada, profile, match(canada, profile, discovery=True))
         self.assertEqual(admitted['collection_decision'], 'admitted')
+
+    def test_ashby_uses_structured_canadian_tier(self):
+        source = {'type': 'ashby', 'board': 'example', 'company': 'Example'}
+        item = {'id': '1', 'title': 'Lead Data Scientist', 'location': 'United States; Canada',
+                'jobUrl': 'https://jobs.ashbyhq.com/example/1', 'descriptionPlain': 'SQL product analytics',
+                'compensation': {'scrapeableCompensationSalarySummary': '$190K - $325K', 'compensationTiers': [
+                    {'title': 'USA', 'components': [{'compensationType': 'Salary', 'currencyCode': 'USD', 'interval': '1 YEAR', 'minValue': 190000, 'maxValue': 325000}]},
+                    {'title': 'Canada', 'components': [{'compensationType': 'Salary', 'currencyCode': 'CAD', 'interval': '1 YEAR', 'minValue': 270000, 'maxValue': 385000, 'summary': 'Base Salary CA$270K – CA$385K'}]}
+                ]}}
+        job = normalize_job(item, source, 'today')
+        self.assertEqual(job['salary_min'], 270000)
+        self.assertEqual(job['salary_max'], 385000)
+        self.assertEqual(job['salary_evidence'], 'Canada: Base Salary CA$270K – CA$385K')
 
     def test_collect_filters_deduplicates_and_preserves_output_on_failure(self):
         with tempfile.TemporaryDirectory() as folder:

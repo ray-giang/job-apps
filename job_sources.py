@@ -203,18 +203,29 @@ def salary_fields(raw, location=""):
     """Extract one unambiguous annual Canadian salary range from real posting formats."""
     result = {"salary_raw": raw, "salary_min": "", "salary_max": "", "salary_currency": "", "salary_period": "",
               "salary_basis": "", "salary_evidence": "", "salary_extraction_confidence": "none"}
+    def convert(value):
+        value = value.replace(",", "").replace(" ", "").lower()
+        return float(value.rstrip("k")) * (1000 if value.endswith("k") else 1)
+    canada_location = bool(re.search(r"\b(?:canada|toronto)\b", location, re.I)) and not re.search(r"\b(?:united states|usa|\bUS\b)\b", location, re.I)
+    min_max = re.search(r"minimum annual salary of\s*(?:CAD|CAN|CA\$|C\$|\$)?\s*(?P<low>[\d,.]+\s*[kK]?).*?maximum salary of\s*(?:CAD|CAN|CA\$|C\$|\$)?\s*(?P<high>[\d,.]+\s*[kK]?)", raw, re.I | re.S)
+    if min_max and (canada_location or re.search(r"\b(?:CAD|CAN)\b|CA\$|C\$", min_max.group(0), re.I)):
+        low, high = (convert(min_max.group(name)) for name in ("low", "high"))
+        evidence = next((line for line in raw.splitlines() if "minimum annual salary" in line.lower()), min_max.group(0))
+        result.update(salary_min=low, salary_max=high, salary_currency="CAD", salary_period="annual", salary_basis="base",
+                      salary_evidence=evidence, salary_extraction_confidence="context")
+        return result
     amount = r"(?:\d{1,3}(?:,\d{3})+|\d{2,6})(?:\.\d+)?\s*[kK]?"
-    currency = r"(?:CAD|CAN|CA\$|C\$|\$)"
-    pattern = re.compile(r"(?P<cur1>" + currency + r")?\s*(?P<low>" + amount + r")\s*(?:CAD|CAN)?\s*(?:-|–|—|to|and)\s*(?P<cur2>" + currency + r")?\s*(?P<high>" + amount + r")\s*(?P<after>CAD|CAN)?", re.I)
+    currency = r"(?:CAD|CAN|USD|CA\$|C\$|US\$|\$)"
+    pattern = re.compile(r"(?P<cur1>" + currency + r")?\s*(?P<low>" + amount + r")\s*(?:CAD|CAN|USD)?\s*(?:-|–|—|to|and)\s*(?P<cur2>" + currency + r")?\s*(?P<high>" + amount + r")\s*(?P<after>CAD|CAN|USD)?", re.I)
     candidates = []
-    for line in (line.strip() for line in raw.splitlines() if line.strip()):
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+    for index, line in enumerate(lines):
         for match in pattern.finditer(line):
             before = line[:match.start()]
             explicit = " ".join(filter(None, (match.group("cur1"), match.group("cur2"), match.group("after"))))
             last_canada = max((before.lower().rfind(term) for term in ("canada", "canadian", "cad", "can base")), default=-1)
             last_us = max((before.lower().rfind(term) for term in ("united states", "usa", "usd", "us-based", "us based")), default=-1)
             explicit_cad = bool(re.search(r"\b(?:CAD|CAN)\b|CA\$|C\$", explicit, re.I))
-            canada_location = bool(re.search(r"\b(?:canada|toronto)\b", location, re.I)) and not re.search(r"\b(?:united states|usa|\bUS\b)\b", location, re.I)
             is_cad = explicit_cad or last_canada > last_us or canada_location
             is_usd = bool(re.search(r"\bUSD\b|US\$", explicit, re.I)) or (not explicit_cad and last_us > last_canada)
             annual_words = bool(re.search(r"annual|annum|year|base (?:pay|salary)|salary range|compensation", line, re.I))
@@ -224,25 +235,42 @@ def salary_fields(raw, location=""):
                                           for name in ("low", "high"))
             if not is_cad or is_usd or not (annual_words or k_notation or (is_cad and values_are_annual_scale)):
                 continue
-            candidates.append((match, line, "exact" if re.search(r"\b(?:CAD|CAN)\b|CA\$|C\$", explicit, re.I) else "context"))
+            local_context = "\n".join(lines[max(0, index - 1):index + 1])
+            candidates.append((match, line, "exact" if re.search(r"\b(?:CAD|CAN)\b|CA\$|C\$", explicit, re.I) else "context", local_context))
     distinct = {}
-    for match, line, confidence in candidates:
-        distinct.setdefault((match.group("low"), match.group("high")), (match, line, confidence))
+    for match, line, confidence, local_context in candidates:
+        distinct.setdefault((match.group("low"), match.group("high")), (match, line, confidence, local_context))
     if len(distinct) != 1:
         result["salary_extraction_confidence"] = "ambiguous" if distinct else "none"
         return result
-    match, line, confidence = next(iter(distinct.values()))
-    def convert(value):
-        value = value.replace(",", "").replace(" ", "").lower()
-        return float(value.rstrip("k")) * (1000 if value.endswith("k") else 1)
+    match, line, confidence, local_context = next(iter(distinct.values()))
     low, high = (convert(match.group(name)) for name in ("low", "high"))
     if not 10000 <= low <= high <= 2000000:
         return result
-    basis_context = raw if len(distinct) == 1 else line
+    basis_context = local_context
     basis = "total_cash" if re.search(r"total cash|on.target compensation|\bOTE\b", basis_context, re.I) else "base" if re.search(r"base salary|base pay|starting base", basis_context, re.I) else ""
     result.update(salary_min=low, salary_max=high, salary_currency="CAD", salary_period="annual", salary_basis=basis,
                   salary_evidence=line, salary_extraction_confidence=confidence)
     return result
+
+
+def ashby_salary_fields(item, raw):
+    """Prefer Ashby's structured annual CAD salary tier over its blended display summary."""
+    candidates = []
+    for tier in (item.get("compensation") or {}).get("compensationTiers") or []:
+        for component in tier.get("components") or []:
+            if (component.get("compensationType") == "Salary" and component.get("currencyCode") == "CAD" and
+                    "YEAR" in str(component.get("interval", "")).upper() and
+                    component.get("minValue") is not None and component.get("maxValue") is not None):
+                candidates.append((float(component["minValue"]), float(component["maxValue"]),
+                                   f"{tier.get('title', 'Canada')}: {component.get('summary', '')}".strip()))
+    unique = {(low, high): evidence for low, high, evidence in candidates}
+    if len(unique) != 1:
+        return None
+    (low, high), evidence = next(iter(unique.items()))
+    basis = "base" if re.search(r"base salary", evidence, re.I) else ""
+    return {"salary_raw": raw, "salary_min": low, "salary_max": high, "salary_currency": "CAD", "salary_period": "annual",
+            "salary_basis": basis, "salary_evidence": evidence, "salary_extraction_confidence": "exact"}
 
 
 def normalize_job(item, source, fetched_at):
@@ -305,7 +333,8 @@ def normalize_job(item, source, fetched_at):
     if not title or not url or urlparse(url).scheme not in {"http", "https"}:
         return None
     if not raw_pay:
-        raw_pay = "\n".join(line for line in description.splitlines() if re.search(r"\bCAD\b|\bUSD\b|salary|compensation|\$\s*\d", line, re.I))
+        raw_pay = "\n".join(line for line in description.splitlines()
+                            if re.search(r"\b(?:CAD|CAN|USD)\b|CA\$|C\$|US\$|salary|compensation|base pay|pay range|on.target earnings|\bOTE\b", line, re.I))
     row = dict.fromkeys(FIELDS, "")
     if kind == "greenhouse":
         row["department"] = "; ".join(part["name"] for part in (item.get("departments") or [])
@@ -325,7 +354,8 @@ def normalize_job(item, source, fetched_at):
                published_at=published, fetched_at=fetched_at,
                extraction_notes="Location and salary extraction is conservative; verify posting details. Greenhouse date is last updated, not necessarily publication.")
     row.update(location_fields(location, mode))
-    row.update(salary_fields(raw_pay, location))
+    structured_salary = ashby_salary_fields(item, raw_pay) if kind == "ashby" else None
+    row.update(structured_salary or salary_fields(raw_pay, location))
     return row
 
 
