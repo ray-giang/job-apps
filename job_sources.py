@@ -199,7 +199,7 @@ def location_fields(location, explicit_mode=""):
             "canada_eligible": eligibility, "location_evidence": location}
 
 
-def salary_fields(raw):
+def salary_fields(raw, location=""):
     """Extract one unambiguous annual Canadian salary range from real posting formats."""
     result = {"salary_raw": raw, "salary_min": "", "salary_max": "", "salary_currency": "", "salary_period": "",
               "salary_basis": "", "salary_evidence": "", "salary_extraction_confidence": "none"}
@@ -214,7 +214,8 @@ def salary_fields(raw):
             last_canada = max((before.lower().rfind(term) for term in ("canada", "canadian", "cad", "can base")), default=-1)
             last_us = max((before.lower().rfind(term) for term in ("united states", "usa", "usd", "us-based", "us based")), default=-1)
             explicit_cad = bool(re.search(r"\b(?:CAD|CAN)\b|CA\$|C\$", explicit, re.I))
-            is_cad = explicit_cad or last_canada > last_us
+            canada_location = bool(re.search(r"\b(?:canada|toronto)\b", location, re.I)) and not re.search(r"\b(?:united states|usa|\bUS\b)\b", location, re.I)
+            is_cad = explicit_cad or last_canada > last_us or canada_location
             is_usd = bool(re.search(r"\bUSD\b|US\$", explicit, re.I)) or (not explicit_cad and last_us > last_canada)
             annual_words = bool(re.search(r"annual|annum|year|base (?:pay|salary)|salary range|compensation", line, re.I))
             k_notation = bool(re.search(r"[\d.]\s*[kK]\b", match.group(0)))
@@ -324,7 +325,7 @@ def normalize_job(item, source, fetched_at):
                published_at=published, fetched_at=fetched_at,
                extraction_notes="Location and salary extraction is conservative; verify posting details. Greenhouse date is last updated, not necessarily publication.")
     row.update(location_fields(location, mode))
-    row.update(salary_fields(raw_pay))
+    row.update(salary_fields(raw_pay, location))
     return row
 
 

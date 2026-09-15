@@ -27,6 +27,11 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(jane['salary_min'], 152000)
         self.assertEqual(jane['salary_max'], 237500)
         self.assertEqual(jane['salary_extraction_confidence'], 'context')
+        jane_location = salary_fields('This role has an annual salary range of $152,000 to $237,500. Most new hires join at $180,500.', 'Canada')
+        self.assertEqual(jane_location['salary_min'], 152000)
+        self.assertEqual(jane_location['salary_max'], 237500)
+        self.assertEqual(jane_location['salary_currency'], 'CAD')
+        self.assertEqual(jane_location['salary_extraction_confidence'], 'context')
         self.assertEqual(salary_fields('$114,000—$142,500 CAD\n$176,000—$220,000 CAD')['salary_extraction_confidence'], 'ambiguous')
         self.assertEqual(salary_fields('Annual compensation CAD 175k - 200k')['salary_basis'], '')
 
