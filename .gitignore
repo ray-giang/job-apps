@@ -1,0 +1,8 @@
+__pycache__/
+.venv/
+profile.json
+jobs.csv
+matches.csv
+applications.csv
+.job_cache/
+jobs.partial.csv

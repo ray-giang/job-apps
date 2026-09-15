@@ -1,0 +1,46 @@
+{
+  "roles": [
+    "Analytics Manager",
+    "Senior Analytics Manager",
+    "Data Science Manager",
+    "Senior Data Science Manager",
+    "Data Scientist",
+    "Analytics Engineer",
+    "Data Analyst",
+    "Product Analyst",
+    "Marketing Analyst",
+    "Revenue Operations Analyst",
+    "Business Analyst",
+    "Growth Analyst",
+    "Insights Analyst",
+    "Revenue Analyst",
+    "Business Intelligence Analyst",
+    "Analyst",
+    "Analytics Lead",
+    "Data Engineer",
+    "Business Intelligence Engineer",
+    "BI Engineer"
+  ],
+  "role_tracks": [
+    {
+      "name": "Analytics/data science management",
+      "patterns": [
+        "\\b(?:senior )?manager\\b.*\\b(?:analytics|data science|data analysis|business intelligence)\\b",
+        "\\b(?:analytics|data science|data analysis|business intelligence)\\b.*\\b(?:senior )?manager\\b"
+      ]
+    },
+    {
+      "name": "Data, analytics and BI IC",
+      "patterns": [
+        "^(?!.*\\b(?:manager|management)\\b).*\\b(?:analyst|data scientist|analytics engineer|data engineer|business intelligence engineer|bi engineer)\\b",
+        "^(?!.*\\b(?:manager|management)\\b).*\\banalytics\\b.*\\b(?:lead|principal|staff)\\b",
+        "^(?!.*\\b(?:manager|management)\\b).*\\b(?:lead|principal|staff)\\b.*\\banalytics\\b"
+      ]
+    }
+  ],
+  "exclude_title_patterns": [
+    "\\b(?:intern|internship|junior|jr|graduate|apprentice|director|head|vp|vice president|chief)\\b",
+    "\\bentry level\\b",
+    "\\b(?:contract|contractor|temporary|fixed term)\\b"
+  ]
+}

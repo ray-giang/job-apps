@@ -1,0 +1,8 @@
+title,company,location,remote,description,url,work_mode,canada_eligible,salary_min,salary_max,salary_currency,salary_period,salary_basis
+Staff Data Analyst,Fictional Remote Match,Canada,true,"SQL dbt Snowflake Looker experimentation attribution forecasting KPI stakeholder",https://example.com/analytics/1,remote,true,175000,195000,CAD,annual,total_cash
+Manager Product Analytics,Fictional Hybrid Match,Toronto,false,"SQL Python A/B experimentation hiring mentoring stakeholder",https://example.com/analytics/2,hybrid,true,170000,200000,CAD,annual,total_cash
+Lead Analytics Engineer,Fictional Undisclosed Pay,Canada,true,"dbt Snowflake Airflow Fivetran Git SQL",https://example.com/analytics/3,remote,true,,,,,
+Staff Data Analyst,Fictional US Only,United States,true,"SQL Looker experimentation",https://example.com/analytics/4,remote,false,180000,200000,USD,annual,base
+Analytics Manager,Fictional Below Target,Toronto,false,"SQL hiring forecasting",https://example.com/analytics/5,hybrid,true,140000,155000,CAD,annual,total_cash
+Junior Data Analyst,Fictional Junior Role,Canada,true,"SQL Python",https://example.com/analytics/6,remote,true,170000,180000,CAD,annual,total_cash
+Lead Product Analyst,Fictional Base Plus Unknown Bonus,Canada,true,"SQL experimentation A/B stakeholder",https://example.com/analytics/7,remote,true,150000,165000,CAD,annual,base

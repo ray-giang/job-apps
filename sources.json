@@ -1,0 +1,229 @@
+{
+  "sources": [
+    {
+      "type": "greenhouse",
+      "board": "fivetran",
+      "company": "Fivetran"
+    },
+    {
+      "type": "greenhouse",
+      "board": "affirm",
+      "company": "Affirm"
+    },
+    {
+      "type": "greenhouse",
+      "board": "reddit",
+      "company": "Reddit"
+    },
+    {
+      "type": "greenhouse",
+      "board": "hootsuite",
+      "company": "Hootsuite"
+    },
+    {
+      "type": "greenhouse",
+      "board": "twilio",
+      "company": "Twilio"
+    },
+    {
+      "type": "greenhouse",
+      "board": "gitlab",
+      "company": "GitLab"
+    },
+    {
+      "type": "greenhouse",
+      "board": "doordashcanada",
+      "company": "DoorDash Canada"
+    },
+    {
+      "type": "greenhouse",
+      "board": "stripe",
+      "company": "Stripe"
+    },
+    {
+      "type": "greenhouse",
+      "board": "databricks",
+      "company": "Databricks"
+    },
+    {
+      "type": "greenhouse",
+      "board": "mongodb",
+      "company": "MongoDB"
+    },
+    {
+      "type": "greenhouse",
+      "board": "elastic",
+      "company": "Elastic"
+    },
+    {
+      "type": "greenhouse",
+      "board": "okta",
+      "company": "Okta"
+    },
+    {
+      "type": "greenhouse",
+      "board": "samsara",
+      "company": "Samsara"
+    },
+    {
+      "type": "greenhouse",
+      "board": "brex",
+      "company": "Brex"
+    },
+    {
+      "type": "greenhouse",
+      "board": "coinbase",
+      "company": "Coinbase"
+    },
+    {
+      "type": "greenhouse",
+      "board": "dropbox",
+      "company": "Dropbox"
+    },
+    {
+      "type": "greenhouse",
+      "board": "instacart",
+      "company": "Instacart"
+    },
+    {
+      "type": "greenhouse",
+      "board": "tailscale",
+      "company": "Tailscale"
+    },
+    {
+      "type": "greenhouse",
+      "board": "northbeam",
+      "company": "Northbeam"
+    },
+    {
+      "type": "greenhouse",
+      "board": "toast",
+      "company": "Toast"
+    },
+    {
+      "type": "greenhouse",
+      "board": "faire",
+      "company": "Faire"
+    },
+    {
+      "type": "greenhouse",
+      "board": "gusto",
+      "company": "Gusto"
+    },
+    {
+      "type": "ashby",
+      "board": "ashby",
+      "company": "Ashby"
+    },
+    {
+      "type": "ashby",
+      "board": "jobber",
+      "company": "Jobber"
+    },
+    {
+      "type": "ashby",
+      "board": "docker",
+      "company": "Docker"
+    },
+    {
+      "type": "ashby",
+      "board": "jane",
+      "company": "Jane"
+    },
+    {
+      "type": "ashby",
+      "board": "ramp",
+      "company": "Ramp"
+    },
+    {
+      "type": "greenhouse",
+      "board": "alphasense",
+      "company": "AlphaSense"
+    },
+    {
+      "type": "greenhouse",
+      "board": "clutch",
+      "company": "Clutch"
+    },
+    {
+      "type": "greenhouse",
+      "board": "d2l",
+      "company": "D2L"
+    },
+    {
+      "type": "greenhouse",
+      "board": "stackadapt",
+      "company": "StackAdapt"
+    },
+    {
+      "type": "greenhouse",
+      "board": "trolley",
+      "company": "Trolley"
+    },
+    {
+      "type": "ashby",
+      "board": "1password",
+      "company": "1Password"
+    },
+    {
+      "type": "ashby",
+      "board": "float",
+      "company": "Float"
+    },
+    {
+      "type": "ashby",
+      "board": "wealthsimple",
+      "company": "Wealthsimple"
+    },
+    {
+      "type": "ashby",
+      "board": "zayzoon",
+      "company": "ZayZoon"
+    },
+    {
+      "type": "ashby",
+      "board": "noibu",
+      "company": "Noibu"
+    },
+    {"type": "greenhouse", "board": "lookoutinc", "company": "Lookout"},
+    {"type": "greenhouse", "board": "autotradercanada", "company": "AutoTrader Canada"},
+    {"type": "greenhouse", "board": "knak", "company": "Knak"},
+    {"type": "greenhouse", "board": "scopely", "company": "Scopely"},
+    {"type": "greenhouse", "board": "pagerduty", "company": "PagerDuty"},
+    {"type": "greenhouse", "board": "mercury", "company": "Mercury"},
+    {"type": "greenhouse", "board": "grafanalabs", "company": "Grafana Labs"},
+    {"type": "greenhouse", "board": "cockroachlabs", "company": "Cockroach Labs"},
+    {"type": "greenhouse", "board": "leagueinc", "company": "League"},
+    {"type": "ashby", "board": "cohere", "company": "Cohere"},
+    {"type": "ashby", "board": "vanta", "company": "Vanta"},
+    {"type": "ashby", "board": "snowflake", "company": "Snowflake"},
+    {"type": "ashby", "board": "loopio", "company": "Loopio"},
+    {"type": "lever", "board": "fullscript", "company": "Fullscript"},
+    {"type": "lever", "board": "biorender", "company": "BioRender"},
+    {"type": "lever", "board": "achievers", "company": "Achievers"},
+    {"type": "greenhouse", "board": "babylist", "company": "Babylist"},
+    {"type": "greenhouse", "board": "behavox", "company": "Behavox"},
+    {"type": "greenhouse", "board": "mozilla", "company": "Mozilla"},
+    {"type": "greenhouse", "board": "canonical", "company": "Canonical"},
+    {"type": "ashby", "board": "voldex", "company": "Voldex"},
+    {"type": "ashby", "board": "wrapbook", "company": "Wrapbook"},
+    {"type": "ashby", "board": "confluent", "company": "Confluent"},
+    {"type": "ashby", "board": "directive", "company": "Directive"},
+    {"type": "lever", "board": "sonatype", "company": "Sonatype"},
+    {"type": "lever", "board": "luxurypresence", "company": "Luxury Presence"},
+    {"type": "lever", "board": "caseware", "company": "Caseware"},
+    {"type": "lever", "board": "veeva", "company": "Veeva"},
+    {"type": "ashby", "board": "hopper", "company": "Hopper"},
+    {"type": "ashby", "board": "marqeta-inc", "company": "Marqeta"},
+    {"type": "ashby", "board": "Blackpoint Cyber", "company": "Blackpoint Cyber"},
+    {"type": "ashby", "board": "hive.co", "company": "Hive"},
+    {"type": "workday", "company": "ServiceTitan", "url": "https://servicetitan.wd1.myworkdayjobs.com/wday/cxs/servicetitan/ServiceTitan/jobs", "query": "data", "optional": true},
+    {"type": "workday", "company": "Autodesk", "url": "https://autodesk.wd1.myworkdayjobs.com/wday/cxs/autodesk/Ext/jobs", "query": "data", "optional": true},
+    {"type": "workday", "company": "Thomson Reuters", "url": "https://thomsonreuters.wd5.myworkdayjobs.com/wday/cxs/thomsonreuters/External_Career_Site/jobs", "query": "data", "optional": true},
+    {"type": "amazon", "company": "Amazon", "url": "https://www.amazon.jobs/en/search.json?base_query=data&loc_query=Canada", "max_results": 500, "optional": true},
+    {"type": "careers_html", "company": "Google", "url": "https://www.google.com/about/careers/applications/jobs/results/?location=Canada&q=data", "link_base": "https://www.google.com/about/careers/applications/", "link_pattern": "(jobs/results/[0-9]+-[^\\\"'<> ]+)", "max_results": 100, "optional": true},
+    {"type": "careers_html", "company": "Shopify", "url": "https://www.shopify.com/careers/search?query=data", "link_pattern": "(/careers/(?!search|extraordinary)[^\\\"'<>? ]+_[0-9a-f-]{36})", "max_results": 100, "optional": true},
+    {"type": "careers_html", "company": "Microsoft", "url": "https://apply.careers.microsoft.com/careers?query=data&location=Canada", "link_pattern": "(/careers/job/[^\\\"'<> ]+)", "max_results": 100, "optional": true},
+    {"type": "careers_html", "company": "Uber", "url": "https://jobs.uber.com/en/jobs/?query=data&location=Canada&page=1&pagesize=10", "link_pattern": "(/en/jobs/[0-9]+/[^\\\"'<>? ]+)", "max_results": 100, "optional": true}
+  ]
+}

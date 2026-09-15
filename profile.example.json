@@ -1,0 +1,7 @@
+{
+  "roles": ["Python Developer", "Backend Developer"],
+  "skills": ["Python", "SQL", "Git"],
+  "locations": ["Toronto", "Canada"],
+  "remote_only": true,
+  "exclude_keywords": ["senior", "staff", "unpaid"]
+}
