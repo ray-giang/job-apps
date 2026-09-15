@@ -38,7 +38,8 @@
     {
       "type": "greenhouse",
       "board": "stripe",
-      "company": "Stripe"
+      "company": "Stripe",
+      "salary_detail_template": "https://stripe.com/careers/listing/{slug}/{id}?gh_jid={id}"
     },
     {
       "type": "greenhouse",

@@ -240,15 +240,35 @@ def salary_fields(raw, location=""):
     distinct = {}
     for match, line, confidence, local_context in candidates:
         distinct.setdefault((match.group("low"), match.group("high")), (match, line, confidence, local_context))
-    if len(distinct) != 1:
+    if len(distinct) > 1:
+        # Several explicit CAD bands (e.g. DoorDash I4/I5/I6) are a tiered
+        # envelope, not missing compensation. Keep the conservative lowest
+        # and highest values and let the salary score reflect the envelope.
+        values = [(convert(match.group("low")), convert(match.group("high")), line)
+                  for match, line, _, _ in distinct.values()]
+        if all(10000 <= low <= high <= 2000000 for low, high, _ in values):
+            low, high = min(v[0] for v in values), max(v[1] for v in values)
+            basis_context = raw
+            basis = "total_cash" if re.search(r"total cash|on.target compensation|\bOTE\b", basis_context, re.I) else "base" if re.search(r"base salary|base pay|starting base", basis_context, re.I) else ""
+            result.update(salary_min=low, salary_max=high, salary_currency="CAD", salary_period="annual", salary_basis=basis,
+                          salary_evidence="; ".join(v[2] for v in values), salary_extraction_confidence="tiered")
+            return result
         result["salary_extraction_confidence"] = "ambiguous" if distinct else "none"
+        return result
+    if not distinct:
         return result
     match, line, confidence, local_context = next(iter(distinct.values()))
     low, high = (convert(match.group(name)) for name in ("low", "high"))
     if not 10000 <= low <= high <= 2000000:
         return result
-    basis_context = local_context
-    basis = "total_cash" if re.search(r"total cash|on.target compensation|\bOTE\b", basis_context, re.I) else "base" if re.search(r"base salary|base pay|starting base", basis_context, re.I) else ""
+    # Keep the basis classification local to the range. Long first-party
+    # pages often mention OTE for sales roles elsewhere on the page; that
+    # text must not relabel an analyst's salary range as total cash.
+    range_context = line[max(0, match.start() - 180):match.end() + 180]
+    basis_context = f"{local_context}\n{range_context}"
+    if re.search(r"salary range|base salary|base pay|starting base", range_context, re.I):
+        basis_context = re.sub(r"(?:OTE|on.target compensation|total cash)", "", basis_context, flags=re.I)
+    basis = "total_cash" if re.search(r"total cash|on.target compensation|\bOTE\b", basis_context, re.I) else "base" if (re.search(r"base salary|base pay|starting base", basis_context, re.I) or re.search(r"annual salary range", range_context, re.I)) else ""
     result.update(salary_min=low, salary_max=high, salary_currency="CAD", salary_period="annual", salary_basis=basis,
                   salary_evidence=line, salary_extraction_confidence=confidence)
     return result
@@ -477,6 +497,18 @@ def collect(args):
                 row = normalize_job(item, source, fetched_at)
                 if row is not None:
                     result = match(row, profile, discovery=True)
+                    detail_template = source.get("salary_detail_template")
+                    if result is not None and detail_template and not row.get("salary_min"):
+                        slug = re.sub(r"[^a-z0-9]+", "-", row["title"].lower()).strip("-")
+                        detail_url = detail_template.format(slug=slug, id=item.get("id", ""), url=item.get("jobUrl", row.get("url", "")))
+                        try:
+                            detail_text = plain(read_text(detail_url))
+                            extracted = salary_fields(detail_text, row.get("location", ""))
+                            if extracted.get("salary_min"):
+                                row.update(extracted)
+                                result = match(row, profile, discovery=True)
+                        except OSError:
+                            pass
                     assessed = collection_assessment(row, profile, result)
                     audit_rows.append(assessed)
                     if assessed["collection_decision"] == "admitted" and assessed["score"] >= args.min_score:
