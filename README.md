@@ -28,6 +28,24 @@ For Greenhouse, the board slug is the company portion of `boards.greenhouse.io/C
 
 Each feed is cached for six hours in `.job_cache/`. Re-running collection within that window re-filters cached listings against your latest preferences. `fetched_at` records the actual retrieval time. A successful collection replaces the previous `jobs.csv`; application tracking stays in its separate file. If all feeds fail, or a partial failure would overwrite an existing output, collection preserves the previous file and reports an error. A first run with partial failures creates a partial result with a warning. Use `--output jobs.partial.csv` if you explicitly want a separate partial result.
 
+### Collection confidence gate
+
+The collector evaluates every normalized posting before it can enter `jobs.csv`. Existing hard rules first reject unrelated titles, temporary work, onsite roles, non-Toronto hybrid roles, Canada-ineligible roles and clearly inadequate disclosed pay. It also rejects physical locations outside Toronto/Canada unless remote eligibility is explicit, and remote regions that do not include Canada.
+
+Surviving postings receive an evidence score out of 100:
+
+| Evidence | Maximum | How it is earned |
+| --- | ---: | --- |
+| Role | 40 | Direct target title; department-assisted discovery receives 28 |
+| Responsibilities | 20 | Both technical and analytical signals in the description; partial evidence receives 10 |
+| Location | 15 | Canada eligibility plus remote/Toronto-hybrid work is confirmed |
+| Employment | 10 | Permanent, regular or full-time status is explicit; unknown status receives 5 |
+| Compensation | 15 | Posted compensation meets the target; partial overlap receives 10; unknown/unconfirmed receives 5 |
+
+The default admission threshold is 60. Scores of 80 or more are labeled `high_confidence_match`; lower admitted scores are `review_required`. A generic analyst title cannot enter without analytical responsibility evidence. Explicitly unrelated analyst families such as FP&A, security, benefits, underwriting, ERP support, treasury and internal audit are excluded.
+
+`jobs.csv` contains only admitted postings. `jobs_audit.csv` records both admitted and rejected evaluations, including `collection_decision`, `rejection_reason`, the five component confidence scores, `overall_confidence`, `admission_reasons` and the source evidence. Both files are local and ignored by Git. `manual_review_required` remains true until location/work mode, permanent status and compensation are all confirmed; a high confidence match is not authorization to submit an application.
+
 Pay extraction accepts only one explicitly annual CAD range and preserves source pay text in `salary_raw`. Base versus total cash must be explicit; bonuses are not guessed. Remote eligibility is inferred conservatively from location labels; ambiguous regions stay flagged for review. Unknown fields do not establish that a job meets your requirements. Check original postings for province restrictions, office days, pay tiers, bonus terms, and whether applications remain open. The collector does not interpret every sentence of a job description or guarantee current availability.
 
 The source adapter lives in `job_sources.py`; `sources.json` controls coverage, and `test_job_sources.py` checks normalization, filtering, caching and failure handling.

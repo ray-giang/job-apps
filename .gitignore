@@ -2,6 +2,7 @@ __pycache__/
 .venv/
 profile.json
 jobs.csv
+jobs_audit.csv
 matches.csv
 applications.csv
 .job_cache/

@@ -37,6 +37,10 @@ def department_discovery(job, profile):
         return ""
     if not re.search(r"\b(?:insights?|decision scien(?:ce|tist)|analytics|analyst|manager|scientist)\b", title):
         return ""
+    if re.search(r"\bmanager\b", title) and not re.search(r"\b(?:analytics?|analyst|insights?|intelligence|measurement|decision science|data science)\b", title):
+        organization = normalize(" ".join(job.get(field, "") for field in ("department", "team")))
+        if not re.search(r"\b(?:analytics?|business intelligence|data science|decision science|revenue operations|sales analytics|commercial insights)\b", organization):
+            return ""
     evidence = []
     for field in ("department", "team", "title"):
         value = job.get(field, "")
@@ -122,6 +126,15 @@ def compensation(job, profile):
 
 
 def validate_preferences(profile):
+    confidence = profile.get("collection_confidence", {})
+    if not isinstance(confidence, dict):
+        raise ValueError("collection_confidence must be an object")
+    for key in ("minimum", "strong"):
+        value = confidence.get(key, 60 if key == "minimum" else 80)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 100:
+            raise ValueError(f"collection_confidence {key} must be between 0 and 100")
+    if confidence.get("minimum", 60) > confidence.get("strong", 80):
+        raise ValueError("collection_confidence minimum cannot exceed strong")
     discovery = profile.get("department_discovery", {})
     if not isinstance(discovery, dict) or not isinstance(discovery.get("enabled", False), bool):
         raise ValueError("department_discovery must be an object with boolean enabled")

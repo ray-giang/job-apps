@@ -165,6 +165,7 @@ def main():
     collecting.add_argument("--sources", type=Path, default=ROOT / "sources.json")
     collecting.add_argument("--output", type=Path, default=ROOT / "jobs.csv")
     collecting.add_argument("--cache-dir", type=Path, default=ROOT / ".job_cache")
+    collecting.add_argument("--audit-output", type=Path, default=ROOT / "jobs_audit.csv")
     collecting.add_argument("--min-score", type=int, choices=range(101), metavar="0-100", default=1)
     collecting.set_defaults(run=collect)
     create = commands.add_parser("setup", help="Create your matching profile interactively")

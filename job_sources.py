@@ -14,7 +14,11 @@ from urllib.request import Request, urlopen
 FIELDS = ["title", "company", "location", "remote", "description", "url", "work_mode",
           "canada_eligible", "salary_min", "salary_max", "salary_currency", "salary_period",
           "salary_basis", "salary_raw", "source", "source_id", "published_at", "fetched_at",
-          "location_evidence", "extraction_notes", "department", "team", "discovery_method", "discovery_evidence", "review_notes"]
+          "location_evidence", "extraction_notes", "department", "team", "discovery_method", "discovery_evidence", "review_notes",
+          "role_confidence", "responsibility_confidence", "location_confidence", "employment_confidence",
+          "compensation_confidence", "compensation_status", "overall_confidence", "application_readiness", "manual_review_required", "admission_reasons"]
+
+AUDIT_FIELDS = FIELDS + ["collection_decision", "rejection_reason"]
 
 
 class PlainText(HTMLParser):
@@ -304,6 +308,81 @@ def normalize_job(item, source, fetched_at):
     return row
 
 
+def collection_assessment(row, profile, result, minimum=None):
+    """Score evidence quality for discovery; hard matching rules remain authoritative."""
+    from job_preferences import normalize, role_matches
+    assessed = dict(row)
+    settings = profile.get("collection_confidence", {})
+    minimum = int(settings.get("minimum", 60) if minimum is None else minimum)
+    strong_minimum = int(settings.get("strong", 80))
+    if result is None:
+        assessed.update(collection_decision="rejected", rejection_reason="Failed title, workplace, compensation, or exclusion gate")
+        return assessed
+
+    title = normalize(row.get("title", ""))
+    description = normalize(row.get("description", ""))
+    location_text = normalize(row.get("location", ""))
+    mode = row.get("work_mode", "").lower()
+    acceptable_remote_region = re.search(r"\b(?:toronto|canada|north america|americas|anywhere|worldwide|global)\b", location_text)
+    if mode == "remote" and location_text not in {"", "remote"} and not acceptable_remote_region:
+        assessed.update(result)
+        assessed.update(collection_decision="rejected", rejection_reason="Remote posting is tied to a region that does not include Canada",
+                        application_readiness="rejected", manual_review_required="true")
+        return assessed
+    if (location_text and mode != "remote" and
+            not re.search(r"\b(?:toronto|canada|anywhere|worldwide|global|north america)\b", location_text)):
+        assessed.update(result)
+        assessed.update(collection_decision="rejected", rejection_reason="Physical or unspecified work location is outside Toronto/Canada",
+                        application_readiness="rejected", manual_review_required="true")
+        return assessed
+    direct = (bool(role_matches(row.get("title", ""), profile)) if profile.get("role_tracks") else
+              any(re.search(r"\b" + re.escape(normalize(role)) + r"\b", title) for role in profile.get("roles", [])))
+    department_assisted = result.get("discovery_method") == "department_and_description"
+    role_score = 40 if direct else 28 if department_assisted else 0
+
+    technical = bool(re.search(r"\b(?:sql|python|dbt|snowflake|looker|tableau|power bi|data model(?:ing|s)?)\b", description))
+    analytical = bool(re.search(r"\b(?:analytics?|analysis|experimentation|a b test(?:ing|s)?|statistics?|forecasting|attribution|metrics?|kpis?|insights?)\b", description))
+    responsibility_score = 20 if technical and analytical else 10 if technical or analytical else 0
+
+    eligibility = row.get("canada_eligible", "").lower()
+    location_score = 15 if eligibility == "true" and mode in {"remote", "hybrid"} else 10 if eligibility == "true" else 6 if mode == "remote" else 5
+
+    employment_text = f"{title} {description}"
+    permanent = bool(re.search(r"\b(?:permanent|regular|full time|fulltime|indefinite)\b", employment_text))
+    employment_score = 10 if permanent else 5
+
+    pay_status = result.get("compensation_status", "")
+    if pay_status in {"meets_target", "above_target", "base_meets_cash_target"}:
+        compensation_score = 15
+    elif pay_status == "partly_meets_target":
+        compensation_score = 10
+    else:
+        compensation_score = 5
+
+    total = role_score + responsibility_score + location_score + employment_score + compensation_score
+    if re.search(r"\banalyst\b", title) and not analytical:
+        total = min(total, minimum - 1)
+    readiness = "high_confidence_match" if total >= strong_minimum else "review_required" if total >= minimum else "rejected"
+    notes = []
+    notes.append("Direct target title" if direct else "Department-assisted role discovery")
+    notes.append("Technical and analytical responsibilities" if technical and analytical else
+                 "Partial responsibility evidence" if technical or analytical else "No strong analytics responsibility evidence")
+    notes.append("Canada eligibility and work mode confirmed" if location_score == 15 else "Location or work eligibility needs review")
+    if not permanent:
+        notes.append("Permanent/full-time status not explicit")
+    if compensation_score == 5:
+        notes.append("Target compensation not confirmed")
+    essential_facts_confirmed = permanent and eligibility == "true" and mode in {"remote", "hybrid"} and compensation_score >= 10
+    assessed.update(result)
+    assessed.update(role_confidence=role_score, responsibility_confidence=responsibility_score,
+                    location_confidence=location_score, employment_confidence=employment_score,
+                    compensation_confidence=compensation_score, overall_confidence=total,
+                    application_readiness=readiness, manual_review_required="false" if essential_facts_confirmed else "true",
+                    admission_reasons="; ".join(notes), collection_decision="admitted" if total >= minimum else "rejected",
+                    rejection_reason="" if total >= minimum else f"Confidence {total} is below collection minimum {minimum}")
+    return assessed
+
+
 def collect(args):
     # Imported here to keep the CLI and source adapter modules independent.
     from job_assistant import load_profile, match, write_csv
@@ -318,7 +397,7 @@ def collect(args):
         endpoint(source)
     if args.output.resolve() in {args.profile.resolve(), args.sources.resolve()}:
         raise ValueError("Output must not overwrite profile or source configuration")
-    rows, seen, failures, succeeded, scanned = [], set(), [], 0, 0
+    rows, audit_rows, seen, failures, succeeded, scanned = [], [], set(), [], 0, 0
     for source in sources:
         label = source.get("company") or source.get("type")
         try:
@@ -328,10 +407,10 @@ def collect(args):
                 row = normalize_job(item, source, fetched_at)
                 if row is not None:
                     result = match(row, profile, discovery=True)
-                    if result is not None and result["score"] >= args.min_score:
-                        for field in ("discovery_method", "discovery_evidence", "review_notes"):
-                            row[field] = result[field]
-                        batch.append(row)
+                    assessed = collection_assessment(row, profile, result)
+                    audit_rows.append(assessed)
+                    if assessed["collection_decision"] == "admitted" and assessed["score"] >= args.min_score:
+                        batch.append(assessed)
             succeeded += 1
             scanned += len(data["jobs"])
             for row in batch:
@@ -351,7 +430,13 @@ def collect(args):
     temp = args.output.with_suffix(args.output.suffix + ".tmp")
     write_csv(temp, FIELDS, rows)
     temp.replace(args.output)
-    print(f"Saved {len(rows)} candidates from {scanned} listings to {args.output}.")
+    audit_output = getattr(args, "audit_output", args.output.with_name("jobs_audit.csv"))
+    if audit_output:
+        audit_temp = audit_output.with_suffix(audit_output.suffix + ".tmp")
+        write_csv(audit_temp, AUDIT_FIELDS, audit_rows)
+        audit_temp.replace(audit_output)
+    rejected = sum(row.get("collection_decision") == "rejected" for row in audit_rows)
+    print(f"Saved {len(rows)} candidates from {scanned} listings to {args.output}; {rejected} evaluated postings were rejected. Audit: {audit_output}.")
     if failures:
         print("WARNING: Partial coverage; optional sources failed: " + "; ".join(failure for _, failure in failures))
     print("Unknown compensation or eligibility stays eligible for review. Run the rank command next.")

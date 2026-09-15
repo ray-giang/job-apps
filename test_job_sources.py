@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from job_assistant import ROOT, read_csv
-from job_sources import collect, endpoint, fetch, fetch_amazon, fetch_careers_html, fetch_workday, location_fields, normalize_job, plain, salary_fields
+from job_sources import collect, collection_assessment, endpoint, fetch, fetch_amazon, fetch_careers_html, fetch_workday, location_fields, normalize_job, plain, salary_fields
 
 
 class SourceTests(unittest.TestCase):
@@ -91,6 +91,31 @@ class SourceTests(unittest.TestCase):
         source = {'type': 'careers_html', 'company': 'Example', 'url': 'https://example.com/careers',
                   'link_pattern': r'(/careers/[^" ]+)', 'max_results': 5}
         self.assertEqual(len(fetch_careers_html(source)['jobs']), 1)
+
+    def test_collection_confidence_requires_analytical_evidence_for_analysts(self):
+        from job_assistant import load_profile, match
+        profile = load_profile(ROOT / 'profile.json')
+        base = dict.fromkeys(__import__('job_sources').FIELDS, '')
+        base.update(title='Senior Analyst', company='Example', location='Remote - Canada', remote='true',
+                    work_mode='remote', canada_eligible='true', url='https://example.com/role')
+        weak = collection_assessment(base, profile, match(base, profile, discovery=True))
+        self.assertEqual(weak['collection_decision'], 'rejected')
+        strong_row = {**base, 'description': 'Use SQL, experimentation, metrics, and product analytics.'}
+        strong = collection_assessment(strong_row, profile, match(strong_row, profile, discovery=True))
+        self.assertEqual(strong['collection_decision'], 'admitted')
+        self.assertEqual(strong['role_confidence'], 40)
+
+    def test_collection_rejects_remote_regions_that_exclude_canada(self):
+        from job_assistant import load_profile, match
+        profile = load_profile(ROOT / 'profile.json')
+        base = dict.fromkeys(__import__('job_sources').FIELDS, '')
+        base.update(title='Staff Data Analyst', company='Example', description='SQL product analytics experimentation',
+                    location='Germany | Remote', remote='true', work_mode='remote', url='https://example.com/de')
+        rejected = collection_assessment(base, profile, match(base, profile, discovery=True))
+        self.assertEqual(rejected['collection_decision'], 'rejected')
+        canada = {**base, 'location': 'Remote - US; Remote - Canada', 'url': 'https://example.com/ca'}
+        admitted = collection_assessment(canada, profile, match(canada, profile, discovery=True))
+        self.assertEqual(admitted['collection_decision'], 'admitted')
 
     def test_collect_filters_deduplicates_and_preserves_output_on_failure(self):
         with tempfile.TemporaryDirectory() as folder:
