@@ -221,7 +221,7 @@ def salary_fields(raw):
             values_are_annual_scale = all(float(match.group(name).replace(",", "").replace(" ", "").lower().rstrip("k")) *
                                           (1000 if match.group(name).strip().lower().endswith("k") else 1) >= 10000
                                           for name in ("low", "high"))
-            if not is_cad or is_usd or not (annual_words or k_notation or (explicit_cad and values_are_annual_scale)):
+            if not is_cad or is_usd or not (annual_words or k_notation or (is_cad and values_are_annual_scale)):
                 continue
             candidates.append((match, line, "exact" if re.search(r"\b(?:CAD|CAN)\b|CA\$|C\$", explicit, re.I) else "context"))
     distinct = {}

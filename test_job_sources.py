@@ -23,6 +23,10 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(salary_fields('CAN base pay range per year: $145,000 - $205,000')['salary_max'], 205000)
         self.assertEqual(salary_fields('CA$95K - CA$143.75K')['salary_min'], 95000)
         self.assertEqual(salary_fields('Canada: the pay range is $180,000 to $247,500 per year')['salary_min'], 180000)
+        jane = salary_fields('Compensation & Benefits\nOur salary bands are intentionally wide.\n🇨🇦 Canada: $152,000 – $237,500 (accomplished: ~$180,500 CAD)\n🇺🇸 United States: $149,600 – $215,100 USD')
+        self.assertEqual(jane['salary_min'], 152000)
+        self.assertEqual(jane['salary_max'], 237500)
+        self.assertEqual(jane['salary_extraction_confidence'], 'context')
         self.assertEqual(salary_fields('$114,000—$142,500 CAD\n$176,000—$220,000 CAD')['salary_extraction_confidence'], 'ambiguous')
         self.assertEqual(salary_fields('Annual compensation CAD 175k - 200k')['salary_basis'], '')
 
