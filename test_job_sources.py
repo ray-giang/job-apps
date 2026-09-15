@@ -17,8 +17,13 @@ class SourceTests(unittest.TestCase):
         salary = salary_fields('Annual base salary: CAD 175,000 – 200,000')
         self.assertEqual(salary['salary_min'], 175000)
         self.assertEqual(salary['salary_basis'], 'base')
-        for raw in ('$175,000 - $200,000 per year', 'CAD 175,000 - 200,000', 'Annual USD 150,000 - 180,000 / CAD 170,000 - 200,000'):
-            self.assertEqual(salary_fields(raw)['salary_min'], '')
+        self.assertEqual(salary_fields('$175,000 - $200,000 per year')['salary_min'], '')
+        self.assertEqual(salary_fields('CAD 175,000 - 200,000')['salary_min'], 175000)
+        self.assertEqual(salary_fields('Annual USD 150,000 - 180,000 / CAD 170,000 - 200,000')['salary_min'], 170000)
+        self.assertEqual(salary_fields('CAN base pay range per year: $145,000 - $205,000')['salary_max'], 205000)
+        self.assertEqual(salary_fields('CA$95K - CA$143.75K')['salary_min'], 95000)
+        self.assertEqual(salary_fields('Canada: the pay range is $180,000 to $247,500 per year')['salary_min'], 180000)
+        self.assertEqual(salary_fields('$114,000—$142,500 CAD\n$176,000—$220,000 CAD')['salary_extraction_confidence'], 'ambiguous')
         self.assertEqual(salary_fields('Annual compensation CAD 175k - 200k')['salary_basis'], '')
 
     def test_unparsed_pay_is_review_not_undisclosed(self):

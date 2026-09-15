@@ -40,7 +40,11 @@ Surviving postings receive an evidence score out of 100:
 | Responsibilities | 20 | Both technical and analytical signals in the description; partial evidence receives 10 |
 | Location | 15 | Canada eligibility plus remote/Toronto-hybrid work is confirmed |
 | Employment | 10 | Permanent, regular or full-time status is explicit; unknown status receives 5 |
-| Compensation | 15 | Posted compensation meets the target; partial overlap receives 10; unknown/unconfirmed receives 5 |
+| Compensation | 15 | Entire range starts at or above CAD 175K |
+
+Compensation uses a more detailed preference scale: 15 when the entire range meets CAD 175K; 12 when it starts at or above the CAD 160K base floor and reaches CAD 175K; 8 when only the upper portion reaches CAD 175K; 4 when the range reaches CAD 160K but not CAD 175K; and 0 when pay is unknown, ambiguous or below the floor. An extracted ceiling below CAD 160K is rejected. Unknown compensation receives no fit points but remains reviewable so Canadian postings without salary disclosure are not automatically lost.
+
+Salary extraction supports `CAD`, `CAN`, `CA$`, `C$`, Canadian-context dollar ranges, K notation, and separate Canada/US ranges. It preserves the selected source line in `salary_evidence` and labels extraction as `exact`, `context`, `ambiguous` or `none`. Multiple Canadian location tiers remain ambiguous rather than choosing a favorable band.
 
 The default admission threshold is 60. Scores of 80 or more are labeled `high_confidence_match`; lower admitted scores are `review_required`. A generic analyst title cannot enter without analytical responsibility evidence. Explicitly unrelated analyst families such as FP&A, security, benefits, underwriting, ERP support, treasury and internal audit are excluded.
 

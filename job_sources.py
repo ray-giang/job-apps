@@ -13,10 +13,10 @@ from urllib.request import Request, urlopen
 
 FIELDS = ["title", "company", "location", "remote", "description", "url", "work_mode",
           "canada_eligible", "salary_min", "salary_max", "salary_currency", "salary_period",
-          "salary_basis", "salary_raw", "source", "source_id", "published_at", "fetched_at",
+          "salary_basis", "salary_raw", "salary_evidence", "salary_extraction_confidence", "source", "source_id", "published_at", "fetched_at",
           "location_evidence", "extraction_notes", "department", "team", "discovery_method", "discovery_evidence", "review_notes",
           "role_confidence", "responsibility_confidence", "location_confidence", "employment_confidence",
-          "compensation_confidence", "compensation_status", "overall_confidence", "application_readiness", "manual_review_required", "admission_reasons"]
+          "compensation_confidence", "compensation_status", "compensation_interpretation", "overall_confidence", "application_readiness", "manual_review_required", "admission_reasons"]
 
 AUDIT_FIELDS = FIELDS + ["collection_decision", "rejection_reason"]
 
@@ -200,27 +200,47 @@ def location_fields(location, explicit_mode=""):
 
 
 def salary_fields(raw):
-    """Extract one explicit annual CAD range; leave ambiguous bands untouched."""
-    result = {"salary_raw": raw, "salary_min": "", "salary_max": "", "salary_currency": "", "salary_period": "", "salary_basis": ""}
-    # Location-tiered or multiple-currency pay needs human interpretation.
-    lines = [line for line in raw.splitlines() if re.search(r"\bCAD\b|CA\$|C\$", line, re.I)]
-    if len(lines) != 1 or re.search(r"\bUSD\b|US\$|\bEUR\b|\bGBP\b", lines[0], re.I):
+    """Extract one unambiguous annual Canadian salary range from real posting formats."""
+    result = {"salary_raw": raw, "salary_min": "", "salary_max": "", "salary_currency": "", "salary_period": "",
+              "salary_basis": "", "salary_evidence": "", "salary_extraction_confidence": "none"}
+    amount = r"(?:\d{1,3}(?:,\d{3})+|\d{2,6})(?:\.\d+)?\s*[kK]?"
+    currency = r"(?:CAD|CAN|CA\$|C\$|\$)"
+    pattern = re.compile(r"(?P<cur1>" + currency + r")?\s*(?P<low>" + amount + r")\s*(?:CAD|CAN)?\s*(?:-|–|—|to|and)\s*(?P<cur2>" + currency + r")?\s*(?P<high>" + amount + r")\s*(?P<after>CAD|CAN)?", re.I)
+    candidates = []
+    for line in (line.strip() for line in raw.splitlines() if line.strip()):
+        for match in pattern.finditer(line):
+            before = line[:match.start()]
+            explicit = " ".join(filter(None, (match.group("cur1"), match.group("cur2"), match.group("after"))))
+            last_canada = max((before.lower().rfind(term) for term in ("canada", "canadian", "cad", "can base")), default=-1)
+            last_us = max((before.lower().rfind(term) for term in ("united states", "usa", "usd", "us-based", "us based")), default=-1)
+            explicit_cad = bool(re.search(r"\b(?:CAD|CAN)\b|CA\$|C\$", explicit, re.I))
+            is_cad = explicit_cad or last_canada > last_us
+            is_usd = bool(re.search(r"\bUSD\b|US\$", explicit, re.I)) or (not explicit_cad and last_us > last_canada)
+            annual_words = bool(re.search(r"annual|annum|year|base (?:pay|salary)|salary range|compensation", line, re.I))
+            k_notation = bool(re.search(r"[\d.]\s*[kK]\b", match.group(0)))
+            values_are_annual_scale = all(float(match.group(name).replace(",", "").replace(" ", "").lower().rstrip("k")) *
+                                          (1000 if match.group(name).strip().lower().endswith("k") else 1) >= 10000
+                                          for name in ("low", "high"))
+            if not is_cad or is_usd or not (annual_words or k_notation or (explicit_cad and values_are_annual_scale)):
+                continue
+            candidates.append((match, line, "exact" if re.search(r"\b(?:CAD|CAN)\b|CA\$|C\$", explicit, re.I) else "context"))
+    distinct = {}
+    for match, line, confidence in candidates:
+        distinct.setdefault((match.group("low"), match.group("high")), (match, line, confidence))
+    if len(distinct) != 1:
+        result["salary_extraction_confidence"] = "ambiguous" if distinct else "none"
         return result
-    line = lines[0]
-    if not re.search(r"annual|annum|year", line, re.I):
-        return result
-    amount = r"(?:\d{1,3}(?:,\d{3})+|\d{3,6})(?:\.\d+)?\s*[kK]?"
-    ranges = list(re.finditer(r"(?P<low>" + amount + r")\s*(?:CAD|CA\$|C\$)?\s*(?:-|–|—|to)\s*(?:CAD\s*|CA\$|C\$|\$)?(?P<high>" + amount + r")", line))
-    if len(ranges) != 1:
-        return result
+    match, line, confidence = next(iter(distinct.values()))
     def convert(value):
         value = value.replace(",", "").replace(" ", "").lower()
         return float(value.rstrip("k")) * (1000 if value.endswith("k") else 1)
-    low, high = (convert(ranges[0][name]) for name in ("low", "high"))
+    low, high = (convert(match.group(name)) for name in ("low", "high"))
     if not 10000 <= low <= high <= 2000000:
         return result
-    basis = "total_cash" if re.search(r"total cash", line, re.I) else "base" if re.search(r"base salary|base pay", line, re.I) else ""
-    result.update(salary_min=low, salary_max=high, salary_currency="CAD", salary_period="annual", salary_basis=basis)
+    basis_context = raw if len(distinct) == 1 else line
+    basis = "total_cash" if re.search(r"total cash|on.target compensation|\bOTE\b", basis_context, re.I) else "base" if re.search(r"base salary|base pay|starting base", basis_context, re.I) else ""
+    result.update(salary_min=low, salary_max=high, salary_currency="CAD", salary_period="annual", salary_basis=basis,
+                  salary_evidence=line, salary_extraction_confidence=confidence)
     return result
 
 
@@ -352,12 +372,31 @@ def collection_assessment(row, profile, result, minimum=None):
     employment_score = 10 if permanent else 5
 
     pay_status = result.get("compensation_status", "")
-    if pay_status in {"meets_target", "above_target", "base_meets_cash_target"}:
-        compensation_score = 15
-    elif pay_status == "partly_meets_target":
-        compensation_score = 10
+    low = float(row["salary_min"]) if str(row.get("salary_min", "")).strip() else None
+    high = float(row["salary_max"]) if str(row.get("salary_max", "")).strip() else None
+    target = profile.get("compensation", {})
+    target_min = float(target.get("min", 175000))
+    base_floor = float(target.get("minimum_base_cad", 160000))
+    if low is None or high is None:
+        compensation_score, compensation_interpretation = 0, "Unknown: no single comparable annual CAD range was extracted"
+    elif low >= target_min:
+        compensation_score, compensation_interpretation = 15, f"Strong: entire CAD {low:,.0f}–{high:,.0f} range meets the {target_min:,.0f} target"
+    elif low >= base_floor and high >= target_min:
+        compensation_score, compensation_interpretation = 12, f"Good: range starts above the {base_floor:,.0f} base floor and reaches the {target_min:,.0f} target"
+    elif high >= target_min:
+        compensation_score, compensation_interpretation = 8, f"Possible: only the upper part of CAD {low:,.0f}–{high:,.0f} reaches the target"
+    elif high >= base_floor:
+        compensation_score, compensation_interpretation = 4, f"Below target: range reaches the base floor but not {target_min:,.0f} total cash"
     else:
-        compensation_score = 5
+        compensation_score, compensation_interpretation = 0, f"Below floor: CAD {low:,.0f}–{high:,.0f} does not reach the {base_floor:,.0f} base minimum"
+    if high is not None and high < base_floor:
+        assessed.update(result)
+        assessed.update(role_confidence=role_score, responsibility_confidence=responsibility_score,
+                        location_confidence=location_score, employment_confidence=employment_score,
+                        compensation_confidence=0, compensation_interpretation=compensation_interpretation,
+                        application_readiness="rejected", manual_review_required="true", collection_decision="rejected",
+                        rejection_reason=f"Advertised CAD ceiling {high:,.0f} is below the {base_floor:,.0f} base minimum")
+        return assessed
 
     total = role_score + responsibility_score + location_score + employment_score + compensation_score
     if re.search(r"\banalyst\b", title) and not analytical:
@@ -370,13 +409,13 @@ def collection_assessment(row, profile, result, minimum=None):
     notes.append("Canada eligibility and work mode confirmed" if location_score == 15 else "Location or work eligibility needs review")
     if not permanent:
         notes.append("Permanent/full-time status not explicit")
-    if compensation_score == 5:
+    if compensation_score == 0:
         notes.append("Target compensation not confirmed")
     essential_facts_confirmed = permanent and eligibility == "true" and mode in {"remote", "hybrid"} and compensation_score >= 10
     assessed.update(result)
     assessed.update(role_confidence=role_score, responsibility_confidence=responsibility_score,
                     location_confidence=location_score, employment_confidence=employment_score,
-                    compensation_confidence=compensation_score, overall_confidence=total,
+                    compensation_confidence=compensation_score, compensation_interpretation=compensation_interpretation, overall_confidence=total,
                     application_readiness=readiness, manual_review_required="false" if essential_facts_confirmed else "true",
                     admission_reasons="; ".join(notes), collection_decision="admitted" if total >= minimum else "rejected",
                     rejection_reason="" if total >= minimum else f"Confidence {total} is below collection minimum {minimum}")
