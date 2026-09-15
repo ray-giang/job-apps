@@ -109,6 +109,11 @@ class SourceTests(unittest.TestCase):
         strong = collection_assessment(strong_row, profile, match(strong_row, profile, discovery=True))
         self.assertEqual(strong['collection_decision'], 'admitted')
         self.assertEqual(strong['role_confidence'], 40)
+        self.assertEqual(strong['compensation_confidence'], 4)
+        upper_range = {**strong_row, 'salary_min': '145000', 'salary_max': '205000',
+                       'salary_currency': 'CAD', 'salary_period': 'annual', 'salary_basis': 'base'}
+        scored = collection_assessment(upper_range, profile, match(upper_range, profile, discovery=True))
+        self.assertEqual(scored['compensation_confidence'], 10)
 
     def test_collection_rejects_remote_regions_that_exclude_canada(self):
         from job_assistant import load_profile, match

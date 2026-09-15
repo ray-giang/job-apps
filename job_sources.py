@@ -378,22 +378,22 @@ def collection_assessment(row, profile, result, minimum=None):
     target_min = float(target.get("min", 175000))
     base_floor = float(target.get("minimum_base_cad", 160000))
     if low is None or high is None:
-        compensation_score, compensation_interpretation = 0, "Unknown: no single comparable annual CAD range was extracted"
+        compensation_score, compensation_interpretation = 4, "Low confidence: salary is missing or no single comparable annual CAD range was extracted"
     elif low >= target_min:
         compensation_score, compensation_interpretation = 15, f"Strong: entire CAD {low:,.0f}–{high:,.0f} range meets the {target_min:,.0f} target"
     elif low >= base_floor and high >= target_min:
         compensation_score, compensation_interpretation = 12, f"Good: range starts above the {base_floor:,.0f} base floor and reaches the {target_min:,.0f} target"
     elif high >= target_min:
-        compensation_score, compensation_interpretation = 8, f"Possible: only the upper part of CAD {low:,.0f}–{high:,.0f} reaches the target"
+        compensation_score, compensation_interpretation = 10, f"Possible: only the upper part of CAD {low:,.0f}–{high:,.0f} reaches the target"
     elif high >= base_floor:
-        compensation_score, compensation_interpretation = 4, f"Below target: range reaches the base floor but not {target_min:,.0f} total cash"
+        compensation_score, compensation_interpretation = 7, f"Below target: range reaches the base floor but not {target_min:,.0f} total cash"
     else:
-        compensation_score, compensation_interpretation = 0, f"Below floor: CAD {low:,.0f}–{high:,.0f} does not reach the {base_floor:,.0f} base minimum"
+        compensation_score, compensation_interpretation = 4, f"Below floor: CAD {low:,.0f}–{high:,.0f} does not reach the {base_floor:,.0f} base minimum"
     if high is not None and high < base_floor:
         assessed.update(result)
         assessed.update(role_confidence=role_score, responsibility_confidence=responsibility_score,
                         location_confidence=location_score, employment_confidence=employment_score,
-                        compensation_confidence=0, compensation_interpretation=compensation_interpretation,
+                        compensation_confidence=4, compensation_interpretation=compensation_interpretation,
                         application_readiness="rejected", manual_review_required="true", collection_decision="rejected",
                         rejection_reason=f"Advertised CAD ceiling {high:,.0f} is below the {base_floor:,.0f} base minimum")
         return assessed
@@ -409,7 +409,7 @@ def collection_assessment(row, profile, result, minimum=None):
     notes.append("Canada eligibility and work mode confirmed" if location_score == 15 else "Location or work eligibility needs review")
     if not permanent:
         notes.append("Permanent/full-time status not explicit")
-    if compensation_score == 0:
+    if compensation_score == 4:
         notes.append("Target compensation not confirmed")
     essential_facts_confirmed = permanent and eligibility == "true" and mode in {"remote", "hybrid"} and compensation_score >= 10
     assessed.update(result)
