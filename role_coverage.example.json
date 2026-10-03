@@ -41,6 +41,8 @@
   "exclude_title_patterns": [
     "\\b(?:intern|internship|junior|jr|graduate|apprentice|director|head|vp|vice president|chief)\\b",
     "\\bentry level\\b",
-    "\\b(?:contract|contractor|temporary|fixed term)\\b"
+    "\\b(?:contract|contractor|temporary|fixed term)\\b",
+    "\\b(?:security analyst|payroll analyst|risk operations analyst|credit risk analyst)\\b",
+    "\\b(?:software|backend|back end|frontend|front end|full stack|fullstack) engineer\\b"
   ]
 }

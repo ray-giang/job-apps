@@ -11,13 +11,13 @@ class DepartmentDiscoveryTests(unittest.TestCase):
         self.profile.update(skills=['SQL'], department_discovery={'enabled': True, 'terms': ['Product', 'Growth', 'Analytics', 'Decision Science']},
                             work_preferences={'hybrid_locations': ['Toronto']},
                             compensation={'currency': 'CAD', 'basis': 'total_cash', 'min': 175000, 'max': 200000})
-        self.job = {'title': 'Manager, Insights', 'department': 'Product', 'description': 'Use SQL to lead experimentation.',
+        self.job = {'title': 'Manager, Growth Strategy', 'department': 'Product Analytics', 'description': 'Use SQL to lead experimentation.',
                     'location': 'Remote Canada', 'work_mode': 'remote', 'canada_eligible': 'true'}
 
     def test_ambiguous_title_admitted_only_in_discovery(self):
         result = match(self.job, self.profile, discovery=True)
         self.assertEqual(result['discovery_method'], 'department_and_description')
-        self.assertIn('department: Product', result['discovery_evidence'])
+        self.assertIn('department: Product Analytics', result['discovery_evidence'])
         self.assertIsNone(match(self.job, self.profile))
 
     def test_title_and_team_can_supply_department_context(self):

@@ -28,6 +28,10 @@ class RoleCoverageTests(unittest.TestCase):
     def test_exclude_unrelated_junior_executive_and_temporary(self):
         for title in ['Junior Data Scientist', 'Data Analyst Intern', 'Director of Analytics',
                       'VP, Data Science', 'Product Manager', 'Senior Software Engineer',
+                      'Staff Backend Engineer - Analytics',
+                      'Staff Software Engineer, Analytics and Reporting Solutions',
+                      'Intermediate Security Analyst, Vulnerability Operations',
+                      'Risk Operations Analyst', 'Senior Payroll Analyst', 'Lead Credit Risk Analyst',
                       'Contract Data Analyst', 'Head of Data Science']:
             with self.subTest(title=title):
                 self.assertEqual(role_matches(title, self.profile), [])
