@@ -33,6 +33,7 @@
       "name": "Data, analytics and BI IC",
       "patterns": [
         "^(?!.*\\b(?:manager|management)\\b).*\\b(?:analyst|data scientist|analytics engineer|data engineer|business intelligence engineer|bi engineer)\\b",
+        "^(?!.*\\b(?:manager|management)\\b).*\\b(?:marketing science|measurement science|data measurement and analytics)\\b",
         "^(?!.*\\b(?:manager|management)\\b).*\\banalytics\\b.*\\b(?:lead|principal|staff)\\b",
         "^(?!.*\\b(?:manager|management)\\b).*\\b(?:lead|principal|staff)\\b.*\\banalytics\\b"
       ]

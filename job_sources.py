@@ -411,7 +411,7 @@ def collection_assessment(row, profile, result, minimum=None):
     department_assisted = result.get("discovery_method") == "department_and_description"
     role_score = 40 if direct else 28 if department_assisted else 0
 
-    technical = bool(re.search(r"\b(?:sql|python|dbt|snowflake|looker|tableau|power bi|data model(?:ing|s)?)\b", description))
+    technical = bool(re.search(r"\b(?:sql|python|dbt|snowflake|looker|tableau|power bi|data model(?:ing|s)?|causal inference|statistical model(?:ing|ling)|marketing mix model(?:ing|ling)|multi touch attribution)\b", description))
     analytical = bool(re.search(r"\b(?:analytics?|analysis|experimentation|a b test(?:ing|s)?|statistics?|forecasting|attribution|metrics?|kpis?|insights?)\b", description))
     responsibility_score = 20 if technical and analytical else 10 if technical or analytical else 0
 
@@ -428,24 +428,30 @@ def collection_assessment(row, profile, result, minimum=None):
     target = profile.get("compensation", {})
     target_min = float(target.get("min", 175000))
     base_floor = float(target.get("minimum_base_cad", 160000))
-    if low is None or high is None:
+    pay_text = f"{row.get('salary_evidence', '')} {row.get('salary_raw', '')}"
+    bonus_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s+(?:annual\s+)?(?:target\s+)?bonus|bonus\s+target\s+(?:of\s+)?(\d+(?:\.\d+)?)\s*%", pay_text, re.I)
+    bonus_percent = float(next(value for value in bonus_match.groups() if value is not None)) if bonus_match else None
+    comparison_low = low * (1 + bonus_percent / 100) if low is not None and bonus_percent is not None else low
+    comparison_high = high * (1 + bonus_percent / 100) if high is not None and bonus_percent is not None else high
+    range_label = "target cash" if bonus_percent is not None else "CAD"
+    if comparison_low is None or comparison_high is None:
         pay_text_present = bool(row.get("salary_raw", "").strip())
         extraction_confidence = row.get("salary_extraction_confidence", "").strip().lower()
         if not pay_text_present and extraction_confidence in {"", "none"}:
             compensation_score, compensation_interpretation = 6, "Unknown: salary is not disclosed"
         else:
             compensation_score, compensation_interpretation = 3, "Low confidence: pay text exists but no comparable annual CAD range was extracted"
-    elif low >= target_min:
-        compensation_score, compensation_interpretation = 15, f"Strong: entire CAD {low:,.0f}–{high:,.0f} range meets the {target_min:,.0f} target"
-    elif low >= base_floor and high >= target_min:
+    elif comparison_low >= target_min:
+        compensation_score, compensation_interpretation = 15, f"Strong: entire {range_label} {comparison_low:,.0f}–{comparison_high:,.0f} range meets the {target_min:,.0f} target"
+    elif comparison_low >= base_floor and comparison_high >= target_min:
         compensation_score, compensation_interpretation = 12, f"Good: range starts above the {base_floor:,.0f} base floor and reaches the {target_min:,.0f} target"
-    elif high >= target_min:
-        compensation_score, compensation_interpretation = 10, f"Possible: only the upper part of CAD {low:,.0f}–{high:,.0f} reaches the target"
-    elif high >= base_floor:
+    elif comparison_high >= target_min:
+        compensation_score, compensation_interpretation = 10, f"Possible: only the upper part of {range_label} {comparison_low:,.0f}–{comparison_high:,.0f} reaches the target"
+    elif comparison_high >= base_floor:
         compensation_score, compensation_interpretation = 7, f"Below target: range reaches the base floor but not {target_min:,.0f} total cash"
     else:
         compensation_score, compensation_interpretation = 3, f"Below floor: CAD {low:,.0f}–{high:,.0f} does not reach the {base_floor:,.0f} base minimum"
-    if high is not None and high < base_floor:
+    if comparison_high is not None and comparison_high < base_floor:
         assessed.update(result)
         assessed.update(role_confidence=role_score, responsibility_confidence=responsibility_score,
                         location_confidence=location_score, employment_confidence=employment_score,

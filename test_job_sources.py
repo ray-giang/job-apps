@@ -171,6 +171,15 @@ class SourceTests(unittest.TestCase):
                          'salary_extraction_confidence': 'ambiguous'}
         ambiguous_assessed = collection_assessment(ambiguous_pay, profile, match(ambiguous_pay, profile, discovery=True))
         self.assertEqual(ambiguous_assessed['compensation_confidence'], 3)
+        bonus_role = {**base, 'title': 'Marketing Science Lead', 'location': 'Toronto, ON, Canada',
+                      'description': 'Lead marketing analytics, causal inference, statistical modeling, and experimentation.',
+                      'salary_min': '156000', 'salary_max': '159000', 'salary_currency': 'CAD',
+                      'salary_period': 'annual', 'salary_evidence': 'Canada: $156000 - $159000 (CAD) + 60% bonus target'}
+        bonus_assessed = collection_assessment(bonus_role, profile, match(bonus_role, profile, discovery=True))
+        self.assertEqual(bonus_assessed['role_confidence'], 40)
+        self.assertEqual(bonus_assessed['responsibility_confidence'], 20)
+        self.assertEqual(bonus_assessed['compensation_confidence'], 15)
+        self.assertIn('target cash 249,600–254,400', bonus_assessed['compensation_interpretation'])
 
     def test_ashby_uses_structured_canadian_tier(self):
         source = {'type': 'ashby', 'board': 'example', 'company': 'Example'}

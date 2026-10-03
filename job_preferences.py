@@ -51,7 +51,7 @@ def department_discovery(job, profile):
     if not evidence:
         return ""
     description = normalize(job.get("description", ""))
-    technical = re.search(r"\b(?:sql|python|dbt|snowflake|looker|tableau|power bi)\b", description)
+    technical = re.search(r"\b(?:sql|python|dbt|snowflake|looker|tableau|power bi|causal inference|statistical model(?:ing|ling)|marketing mix model(?:ing|ling)|multi touch attribution)\b", description)
     analytical = re.search(r"\b(?:experimentation|a b test(?:ing|s)?|statistical analysis|product analytics|marketing analytics|forecasting|attribution|data model(?:ing|s)?|data analysis|business intelligence)\b", description)
     if not technical or not analytical:
         return ""

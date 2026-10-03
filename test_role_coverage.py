@@ -16,7 +16,8 @@ class RoleCoverageTests(unittest.TestCase):
                       'Senior Business Analyst', 'Principal Insights Analyst', 'Growth Analyst',
                       'Senior Revenue Analyst', 'Business Intelligence Analyst', 'Analyst',
                       'Senior Analyst, Product', 'Analytics Lead', 'Data Engineer',
-                      'Principal Data Engineer', 'Business Intelligence Engineer', 'Senior BI Engineer']:
+                      'Principal Data Engineer', 'Business Intelligence Engineer', 'Senior BI Engineer',
+                      'Marketing Science Lead', 'Measurement Science Specialist']:
             with self.subTest(title=title):
                 self.assertIn('Data, analytics and BI IC', role_matches(title, self.profile))
 
