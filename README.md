@@ -38,11 +38,11 @@ Surviving postings receive an evidence score out of 100:
 | --- | ---: | --- |
 | Role | 40 | Direct target title; department-assisted discovery receives 28 |
 | Responsibilities | 20 | Both technical and analytical signals in the description; partial evidence receives 10 |
-| Location | 15 | Canada eligibility plus remote/Toronto-hybrid work is confirmed |
+| Location | 15 | Canada eligibility plus remote/Toronto-hybrid work is confirmed; confirmed Canada with unclear work mode receives 11, and remote with uncertain Canada eligibility receives 8 |
 | Employment | 10 | Permanent, regular or full-time status is explicit; unknown status receives 5 |
 | Compensation | 15 | Entire range starts at or above CAD 175K |
 
-Compensation uses a more detailed preference scale: 15 when the entire range meets CAD 175K; 12 when it starts at or above the CAD 160K base floor and reaches CAD 175K; 10 when only the upper portion reaches CAD 175K; 7 when the range reaches CAD 160K but not CAD 175K; and 4 when pay is below the floor, missing or too ambiguous to compare. An extracted ceiling below CAD 160K is still rejected even though its audit score is 4. Unknown compensation remains reviewable so Canadian postings without salary disclosure are not automatically lost.
+Compensation uses a more detailed preference scale: 15 when the entire range meets CAD 175K; 12 when it starts at or above the CAD 160K base floor and reaches CAD 175K; 10 when only the upper portion reaches CAD 175K; 7 when the range reaches CAD 160K but not CAD 175K; 6 when salary is not disclosed; and 3 when disclosed pay is below the floor or too ambiguous to compare. An extracted ceiling below CAD 160K is still rejected even though its audit score is 3. Unknown compensation remains reviewable so Canadian postings without salary disclosure are not automatically lost.
 
 Salary extraction supports `CAD`, `CAN`, `CA$`, `C$`, Canadian-context dollar ranges, K notation, separate Canada/US ranges, and narrative minimum/midpoint/maximum bands. For Ashby, structured annual CAD compensation tiers take priority over blended display summaries. It preserves the selected source line or structured tier in `salary_evidence` and labels extraction as `exact`, `context`, `tiered`, `ambiguous` or `none`. Multiple explicit Canadian location tiers are retained as a conservative low-to-high envelope; only conflicting or unclear ranges remain ambiguous. Dollar-denominated revenue, budgets and other non-pay figures are not treated as salary evidence.
 

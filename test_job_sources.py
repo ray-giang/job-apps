@@ -134,7 +134,7 @@ class SourceTests(unittest.TestCase):
         strong = collection_assessment(strong_row, profile, match(strong_row, profile, discovery=True))
         self.assertEqual(strong['collection_decision'], 'admitted')
         self.assertEqual(strong['role_confidence'], 40)
-        self.assertEqual(strong['compensation_confidence'], 4)
+        self.assertEqual(strong['compensation_confidence'], 6)
         upper_range = {**strong_row, 'salary_min': '145000', 'salary_max': '205000',
                        'salary_currency': 'CAD', 'salary_period': 'annual', 'salary_basis': 'base'}
         scored = collection_assessment(upper_range, profile, match(upper_range, profile, discovery=True))
@@ -151,6 +151,26 @@ class SourceTests(unittest.TestCase):
         canada = {**base, 'location': 'Remote - US; Remote - Canada', 'url': 'https://example.com/ca'}
         admitted = collection_assessment(canada, profile, match(canada, profile, discovery=True))
         self.assertEqual(admitted['collection_decision'], 'admitted')
+
+    def test_collection_uses_configured_role_location_and_missing_pay_scores(self):
+        from job_assistant import load_profile, match
+        profile = load_profile(ROOT / 'profile.json')
+        base = dict.fromkeys(__import__('job_sources').FIELDS, '')
+        base.update(title='Manager, Customer Insights', company='Example',
+                    description='Lead SQL analysis, experimentation, metrics, and customer analytics.',
+                    location='Canada', canada_eligible='true', url='https://example.com/insights')
+        unclear_mode = collection_assessment(base, profile, match(base, profile, discovery=True))
+        self.assertEqual(unclear_mode['role_confidence'], 40)
+        self.assertEqual(unclear_mode['location_confidence'], 11)
+        self.assertEqual(unclear_mode['compensation_confidence'], 6)
+        remote_unknown = {**base, 'location': 'Remote', 'work_mode': 'remote', 'canada_eligible': '',
+                          'url': 'https://example.com/remote'}
+        remote_assessed = collection_assessment(remote_unknown, profile, match(remote_unknown, profile, discovery=True))
+        self.assertEqual(remote_assessed['location_confidence'], 8)
+        ambiguous_pay = {**base, 'salary_raw': 'Competitive compensation based on location',
+                         'salary_extraction_confidence': 'ambiguous'}
+        ambiguous_assessed = collection_assessment(ambiguous_pay, profile, match(ambiguous_pay, profile, discovery=True))
+        self.assertEqual(ambiguous_assessed['compensation_confidence'], 3)
 
     def test_ashby_uses_structured_canadian_tier(self):
         source = {'type': 'ashby', 'board': 'example', 'company': 'Example'}
