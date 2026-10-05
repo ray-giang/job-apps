@@ -5,5 +5,8 @@ jobs.csv
 jobs_audit.csv
 matches.csv
 applications.csv
+resume_master.json
+tailored_resumes/
+.resume_work/
 .job_cache/
 jobs.partial.csv

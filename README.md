@@ -11,6 +11,18 @@ python3 job_assistant.py rank
 
 `collect` downloads public job-board feeds from the companies in `sources.json`, converts HTML descriptions into text, filters against your profile, removes duplicate URLs, and writes `jobs.csv`. `rank` then produces `matches.csv` with scores and review notes. No API key or additional Python packages are required for these public feeds. Your resume and profile stay local; only feed requests go to the sources.
 
+## Prepare fact-locked resume content
+
+`resume_master.json` is a local, git-ignored evidence library extracted from the source resume. It stores fixed contact details, employers, titles, dates, metrics, achievements, skills, and tags. `resume_tailor.py` selects and orders that existing evidence for one job without generating new claims:
+
+```sh
+python3 resume_tailor.py "Marketing Science Lead"
+```
+
+The command writes `tailored_resumes/resume_selection.json`, including the chosen career track, headline, skills, bullets, source evidence IDs, and target job metadata. Generated resume content remains local and git-ignored. This selection file is the input to the document-rendering stage; it is not itself an application-ready resume.
+
+`resume_documents.py` creates fixed-layout resume copies for the highest-scoring jobs. It uses the supplied Analytics Manager DOCX as the stable one-page layout, selects either management, product, marketing, data-science, or analytics-engineering content emphasis, and writes a clean working DOCX plus a review DOCX whose changed text is highlighted. The clean working copy is the source for the application PDF; it remains in the ignored work directory rather than the Applications folder.
+
 There are currently 77 configured employer sources across Greenhouse, Ashby, Lever, Workday, Amazon's public search API, and selected first-party careers pages. See `sources.json` for the full list. Individual jobs still require eligibility review. This is curated coverage, not a search of the entire job market. It includes remote and hybrid listings when those companies publish them. It does not scrape LinkedIn or Indeed. Custom careers pages are marked optional because their HTML changes more often; one optional failure no longer discards results from healthy feeds.
 
 Edit `sources.json` to add company boards. Supported entries look like:
