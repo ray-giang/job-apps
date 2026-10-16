@@ -23,7 +23,19 @@ The command writes `tailored_resumes/resume_selection.json`, including the chose
 
 `resume_documents.py` creates fixed-layout resume copies for the highest-scoring jobs. It uses the supplied Analytics Manager DOCX as the stable one-page layout, selects either management, product, marketing, data-science, or analytics-engineering content emphasis, and writes a clean working DOCX plus a review DOCX whose changed text is highlighted. The clean working copy is the source for the application PDF; it remains in the ignored work directory rather than the Applications folder.
 
-There are currently 77 configured employer sources across Greenhouse, Ashby, Lever, Workday, Amazon's public search API, and selected first-party careers pages. See `sources.json` for the full list. Individual jobs still require eligibility review. This is curated coverage, not a search of the entire job market. It includes remote and hybrid listings when those companies publish them. It does not scrape LinkedIn or Indeed. Custom careers pages are marked optional because their HTML changes more often; one optional failure no longer discards results from healthy feeds.
+There are currently 87 configured employer sources across Greenhouse, Ashby, Lever, Workday, Amazon's public search API, and selected first-party careers pages, plus an optional local LinkedIn-alert intake. See `sources.json` for the full list. Individual jobs still require eligibility review. Coverage now includes Microsoft, Amazon, Google, Shopify, NVIDIA, Anthropic, OpenAI, xAI, Scale AI, CoreWeave, Perplexity, ElevenLabs, Cohere, Cursor, Mistral AI, Databricks and other data/AI employers. Custom careers pages are marked optional because their HTML changes more often; one optional failure no longer discards results from healthy feeds.
+
+### LinkedIn discovery without scraping
+
+LinkedIn job alerts broaden discovery beyond the curated company list. The workflow reads new alert emails, resolves each opportunity to a first-party employer application page where possible, and stores the normalized intake in the git-ignored `linkedin_alerts.csv`. The collector then deduplicates these rows with the direct ATS feeds and applies the same title, location, responsibility and compensation checks. It does not automate or scrape LinkedIn pages.
+
+The local file uses the columns in `linkedin_alerts.example.csv`:
+
+```text
+linkedin_job_id,title,company,location,work_mode,description,url,salary_raw,published_at
+```
+
+Use the direct employer URL in `url` whenever one can be found. LinkedIn-only links and rows with missing descriptions remain lower-confidence review candidates until the first-party posting is verified.
 
 Edit `sources.json` to add company boards. Supported entries look like:
 

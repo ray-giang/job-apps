@@ -89,6 +89,22 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(job['canada_eligible'], 'true')
         self.assertIn('Experimentation', job['description'])
 
+    def test_linkedin_alert_csv_is_local_supplemental_discovery(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'linkedin_alerts.csv'
+            path.write_text(
+                'linkedin_job_id,title,company,location,work_mode,description,url,salary_raw,published_at\n'
+                '123,Staff Data Analyst,Example AI,Remote - Canada,remote,SQL product analytics experimentation,https://example.com/jobs/123,,2026-10-16\n',
+                encoding='utf-8',
+            )
+            source = {'type': 'linkedin_alerts', 'path': str(path)}
+            data, stamp, cached = fetch(source, Path(folder) / 'cache')
+            self.assertFalse(cached)
+            job = normalize_job(data['jobs'][0], source, stamp)
+            self.assertEqual(job['source'], 'LinkedIn alert')
+            self.assertEqual(job['source_id'], '123')
+            self.assertEqual(job['canada_eligible'], 'true')
+
     def test_ashby_slug_patch_encodes_spaces_and_keeps_dots(self):
         self.assertEqual(endpoint({'type': 'ashby', 'board': 'Blackpoint Cyber'}),
                          'https://api.ashbyhq.com/posting-api/job-board/Blackpoint%20Cyber?includeCompensation=true')

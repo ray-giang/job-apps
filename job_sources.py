@@ -5,6 +5,7 @@ import html
 import json
 import re
 import time
+import csv
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
@@ -52,6 +53,9 @@ def plain(value):
 
 def endpoint(source):
     kind = source.get("type")
+    if kind == "linkedin_alerts":
+        path = Path(source.get("path", "linkedin_alerts.csv"))
+        return f"local-linkedin-alerts:{path}"
     if kind == "remotive":
         return "https://remotive.com/api/remote-jobs"
     if kind in {"workday", "amazon", "careers_html"}:
@@ -153,6 +157,15 @@ def fetch_careers_html(source):
 
 def fetch(source, cache_dir):
     url = endpoint(source)
+    if source.get("type") == "linkedin_alerts":
+        path = Path(source.get("path", "linkedin_alerts.csv"))
+        if not path.is_absolute():
+            path = Path(__file__).resolve().parent / path
+        if not path.exists():
+            raise FileNotFoundError(path)
+        with path.open(newline="", encoding="utf-8-sig") as handle:
+            jobs = list(csv.DictReader(handle))
+        return {"jobs": jobs}, datetime.now(timezone.utc).isoformat(), False
     cache = cache_dir / (hashlib.sha256(url.encode()).hexdigest() + ".json")
     # Remotive advises no more than four retrievals per day. All feeds use a
     # six-hour cache, including empty results. Failed fetches never replace it.
@@ -297,7 +310,12 @@ def normalize_job(item, source, fetched_at):
     kind = source["type"]
     if kind == "ashby" and item.get("isListed") is False:
         return None
-    if kind == "remotive":
+    if kind == "linkedin_alerts":
+        title, company = item.get("title", ""), item.get("company", "")
+        location, mode = item.get("location", ""), item.get("work_mode", "")
+        description, url = item.get("description", ""), item.get("url", "")
+        raw_pay, published = item.get("salary_raw", ""), item.get("published_at", "")
+    elif kind == "remotive":
         title, company = item.get("title", ""), item.get("company_name", "")
         location, mode = item.get("candidate_required_location", ""), "remote"
         description, url = plain(item.get("description")), item.get("url", "")
@@ -370,7 +388,7 @@ def normalize_job(item, source, fetched_at):
         row["team"] = item.get("jobFamily") or ""
     # Remotive's broad board category is not an employer department.
     row.update(title=title, company=company, location=location, description=description, url=url,
-               source="Remotive" if kind == "remotive" else f"{kind}: {company}", source_id=str(item.get("id") or item.get("id_icims") or ""),
+               source="LinkedIn alert" if kind == "linkedin_alerts" else "Remotive" if kind == "remotive" else f"{kind}: {company}", source_id=str(item.get("id") or item.get("id_icims") or item.get("linkedin_job_id") or ""),
                published_at=published, fetched_at=fetched_at,
                extraction_notes="Location and salary extraction is conservative; verify posting details. Greenhouse date is last updated, not necessarily publication.")
     row.update(location_fields(location, mode))

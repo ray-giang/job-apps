@@ -5,6 +5,7 @@ jobs.csv
 jobs_audit.csv
 matches.csv
 applications.csv
+linkedin_alerts.csv
 resume_master.json
 tailored_resumes/
 .resume_work/
