@@ -105,6 +105,24 @@ class SourceTests(unittest.TestCase):
             self.assertEqual(job['source_id'], '123')
             self.assertEqual(job['canada_eligible'], 'true')
 
+    def test_linkedin_alert_opportunity_is_written_to_jobs_csv(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            alerts = root / 'linkedin_alerts.csv'
+            alerts.write_text(
+                'linkedin_job_id,title,company,location,work_mode,description,url,salary_raw,published_at\n'
+                '456,Python Developer,Example AI,Remote - Canada,remote,Permanent full-time Python SQL analytics role,https://example.com/jobs/456,,2026-10-16\n',
+                encoding='utf-8',
+            )
+            config = root / 'sources.json'
+            config.write_text(json.dumps({'sources': [{'type': 'linkedin_alerts', 'path': str(alerts)}]}), encoding='utf-8')
+            args = argparse.Namespace(profile=ROOT / 'profile.example.json', sources=config, output=root / 'jobs.csv',
+                                      cache_dir=root / 'cache', min_score=1)
+            collect(args)
+            rows = read_csv(args.output, ['title', 'source'])
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]['source'], 'LinkedIn alert')
+
     def test_ashby_slug_patch_encodes_spaces_and_keeps_dots(self):
         self.assertEqual(endpoint({'type': 'ashby', 'board': 'Blackpoint Cyber'}),
                          'https://api.ashbyhq.com/posting-api/job-board/Blackpoint%20Cyber?includeCompensation=true')
